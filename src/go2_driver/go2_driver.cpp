@@ -44,7 +44,8 @@ Go2Driver::Go2Driver(
   pointcloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("pointcloud", 10);
   joint_state_pub_ = create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
   odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", qos_profile);
-  imu_pub_ = create_publisher<unitree_go::msg::IMUState>("imu", 10);
+  imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
+  lidar_imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("lidar_imu", 10);
   request_pub_ = create_publisher<unitree_api::msg::Request>("api/sport/request", 10);
 
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -64,6 +65,9 @@ Go2Driver::Go2Driver(
 
   cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
     "cmd_vel", 10, std::bind(&Go2Driver::cmd_vel_callback, this, std::placeholders::_1));
+
+  lidar_imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+    "/utlidar/imu", 10, std::bind(&Go2Driver::publish_lidar_imu, this, std::placeholders::_1));
 
   set_body_height_service_ =
     this->create_service<go2_interfaces::srv::BodyHeight>(
@@ -131,7 +135,6 @@ Go2Driver::Go2Driver(
 
 void Go2Driver::publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
-  msg->header.stamp = now();
   msg->header.frame_id = "radar";
   pointcloud_pub_->publish(*msg);
 }
@@ -188,6 +191,21 @@ void Go2Driver::publish_joint_states(const unitree_go::msg::LowState::SharedPtr 
     msg->motor_state[6].q, msg->motor_state[7].q, msg->motor_state[8].q};
 
   joint_state_pub_->publish(joint_state);
+
+  sensor_msgs::msg::Imu imu;
+  imu.header.frame_id = "imu";
+  imu.header.stamp = now();
+  imu.orientation.w = msg->imu_state.quaternion[0];
+  imu.orientation.x = msg->imu_state.quaternion[1];
+  imu.orientation.y = msg->imu_state.quaternion[2];
+  imu.orientation.z = msg->imu_state.quaternion[3];
+  imu.angular_velocity.x = msg->imu_state.gyroscope[0];
+  imu.angular_velocity.y = msg->imu_state.gyroscope[1];
+  imu.angular_velocity.z = msg->imu_state.gyroscope[2];
+  imu.linear_acceleration.x = msg->imu_state.accelerometer[0];
+  imu.linear_acceleration.y = msg->imu_state.accelerometer[1];
+  imu.linear_acceleration.z = msg->imu_state.accelerometer[2];
+  imu_pub_->publish(imu);
 }
 
 void Go2Driver::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
@@ -202,6 +220,13 @@ void Go2Driver::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::Move);
 
   request_pub_->publish(req);
+}
+
+void Go2Driver::publish_lidar_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
+{
+  sensor_msgs::msg::Imu imu = *msg;
+  imu.header.frame_id = "radar";
+  lidar_imu_pub_->publish(imu);
 }
 
 void Go2Driver::handleBodyHeight(
