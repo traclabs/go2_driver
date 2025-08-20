@@ -38,6 +38,8 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <point_cloud_transport/point_cloud_transport.hpp>
+#include <point_cloud_transport/publisher.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include "unitree_go/msg/low_state.hpp"
@@ -124,7 +126,6 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr lidar_imu_sub_;
 
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
@@ -145,6 +146,10 @@ private:
   rclcpp::TimerBase::SharedPtr timer_lidar_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
   sensor_msgs::msg::Joy joy_state_;
+
+  rclcpp::TimerBase::SharedPtr initialization_timer_;
+  std::shared_ptr<point_cloud_transport::PointCloudTransport> pct_;
+  std::shared_ptr<point_cloud_transport::Publisher> pointcloud_pub_;
 
   bool odom_published_{false};
 };

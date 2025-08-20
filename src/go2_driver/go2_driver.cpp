@@ -30,6 +30,8 @@
 
 #include <go2_driver/go2_driver.hpp>
 
+using namespace std::chrono_literals;
+
 namespace go2_driver
 {
 
@@ -41,7 +43,6 @@ Go2Driver::Go2Driver(
   rclcpp::QoS qos_profile(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default));
   qos_profile.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
-  pointcloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>("pointcloud", 10);
   joint_state_pub_ = create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
   odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", qos_profile);
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
@@ -131,14 +132,27 @@ Go2Driver::Go2Driver(
     std::bind(
       &Go2Driver::handleSwitchJoystick, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+  // Initialize point cloud transport after construction
+  // shared_from_this can't be used in the constructor
+  this->initialization_timer_ = create_wall_timer(
+    1ms, [this]() {
+      initialization_timer_->cancel();
+      pct_ = std::make_shared<point_cloud_transport::PointCloudTransport>(shared_from_this());
+      pointcloud_pub_ = std::make_shared<point_cloud_transport::Publisher>(pct_->advertise("pointcloud", 10));
+    });
 }
 
 void Go2Driver::publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
 {
+  // If there are no subscribers, do not publish
+  if (!pointcloud_pub_ || !pointcloud_pub_->getNumSubscribers())
+      return;
+
   msg->header.frame_id = "radar";
   msg->header.stamp.sec = 0;
   msg->header.stamp.nanosec = 0;
-  pointcloud_pub_->publish(*msg);
+  pointcloud_pub_->publish(msg);
 }
 
 void Go2Driver::publish_pose_stamped(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
