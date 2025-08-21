@@ -48,6 +48,7 @@ Go2Driver::Go2Driver(
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
   lidar_imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("lidar_imu", 10);
   request_pub_ = create_publisher<unitree_api::msg::Request>("api/sport/request", 10);
+  low_state_pub_ = create_publisher<unitree_go::msg::LowState>("relayed/low_state", 10);
 
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
     "/utlidar/cloud", 10,
@@ -62,7 +63,7 @@ Go2Driver::Go2Driver(
 
   low_state_sub_ = create_subscription<unitree_go::msg::LowState>(
     "lowstate", 10,
-    std::bind(&Go2Driver::publish_joint_states, this, std::placeholders::_1));
+    std::bind(&Go2Driver::handle_low_state, this, std::placeholders::_1));
 
   cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
     "cmd_vel", 10, std::bind(&Go2Driver::cmd_vel_callback, this, std::placeholders::_1));
@@ -192,8 +193,11 @@ void Go2Driver::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
   joy_state_ = *msg;
 }
 
-void Go2Driver::publish_joint_states(const unitree_go::msg::LowState::SharedPtr msg)
+void Go2Driver::handle_low_state(const unitree_go::msg::LowState::SharedPtr msg)
 {
+  // Relay the message to the wifi interface
+  low_state_pub_->publish(*msg);
+
   sensor_msgs::msg::JointState joint_state;
   joint_state.header.stamp = now();
   joint_state.name = {"FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",

@@ -44,6 +44,7 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include "unitree_go/msg/low_state.hpp"
 #include "unitree_go/msg/imu_state.hpp"
+#include "unitree_go/msg/motor_state.hpp"
 #include "tf2_ros/transform_broadcaster.h"
 #include "nlohmann/json.hpp"
 #include "unitree_api/msg/request.hpp"
@@ -70,7 +71,7 @@ private:
   void publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void publish_pose_stamped(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
-  void publish_joint_states(const unitree_go::msg::LowState::SharedPtr msg);
+  void handle_low_state(const unitree_go::msg::LowState::SharedPtr msg);
   void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
   void publish_lidar_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
 
@@ -131,6 +132,7 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr lidar_imu_pub_;
   rclcpp::Publisher<unitree_api::msg::Request>::SharedPtr request_pub_;
+  rclcpp::Publisher<unitree_go::msg::LowState>::SharedPtr low_state_pub_;
 
   rclcpp::Service<go2_interfaces::srv::BodyHeight>::SharedPtr set_body_height_service_;
   rclcpp::Service<go2_interfaces::srv::ContinuousGait>::SharedPtr set_continuous_gait_service_;
