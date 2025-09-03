@@ -32,6 +32,9 @@
 
 using namespace std::chrono_literals;
 
+const int32_t OBSTACLES_AVOID_API_ID_SWITCH_SET = 1001;
+const int32_t ROBOT_SPORT_API_ID_CLASSICWALK = 2049;
+
 namespace go2_driver
 {
 
@@ -47,7 +50,8 @@ Go2Driver::Go2Driver(
   odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom", qos_profile);
   imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu", 10);
   lidar_imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("lidar_imu", 10);
-  request_pub_ = create_publisher<unitree_api::msg::Request>("api/sport/request", 10);
+  sport_request_pub_ = create_publisher<unitree_api::msg::Request>("api/sport/request", 10);
+  obstacles_avoid_request_pub_ = create_publisher<unitree_api::msg::Request>("api/obstacles_avoid/request", 10);
   low_state_pub_ = create_publisher<unitree_go::msg::LowState>("relayed/low_state", 10);
 
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -134,14 +138,38 @@ Go2Driver::Go2Driver(
       &Go2Driver::handleSwitchJoystick, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
+  this->initialization_timer_ = create_wall_timer(1ms, std::bind(&Go2Driver::initialize, this));
+}
+
+void Go2Driver::initialize()
+{
+  // Cancel initialization timer
+  initialization_timer_->cancel();
+
   // Initialize point cloud transport after construction
   // shared_from_this can't be used in the constructor
-  this->initialization_timer_ = create_wall_timer(
-    1ms, [this]() {
-      initialization_timer_->cancel();
-      pct_ = std::make_shared<point_cloud_transport::PointCloudTransport>(shared_from_this());
-      pointcloud_pub_ = std::make_shared<point_cloud_transport::Publisher>(pct_->advertise("pointcloud", 10));
-    });
+  pct_ = std::make_shared<point_cloud_transport::PointCloudTransport>(shared_from_this());
+  pointcloud_pub_ = std::make_shared<point_cloud_transport::Publisher>(pct_->advertise("pointcloud", 10));
+
+  // Turn off obstacle avoidance
+  {
+    unitree_api::msg::Request req;
+    nlohmann::json js;
+    js["enable"] = false;
+    req.parameter = js.dump();
+    req.header.identity.api_id = OBSTACLES_AVOID_API_ID_SWITCH_SET;
+    obstacles_avoid_request_pub_->publish(req);
+  }
+
+  // Change gate to 'classic' mode
+  {
+    unitree_api::msg::Request req;
+    nlohmann::json js;
+    js["data"] = true;
+    req.parameter = js.dump();
+    req.header.identity.api_id = ROBOT_SPORT_API_ID_CLASSICWALK;
+    sport_request_pub_->publish(req);
+  }
 }
 
 void Go2Driver::publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
@@ -238,7 +266,7 @@ void Go2Driver::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::Move);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
 }
 
 void Go2Driver::publish_lidar_imu(const sensor_msgs::msg::Imu::SharedPtr msg)
@@ -268,7 +296,7 @@ void Go2Driver::handleBodyHeight(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::BodyHeight);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -286,7 +314,7 @@ void Go2Driver::handleContinuousGait(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::ContinuousGait);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -320,7 +348,7 @@ void Go2Driver::handleEuler(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::Euler);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -344,7 +372,7 @@ void Go2Driver::handleFootRaiseHeight(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::FootRaiseHeight);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -415,7 +443,7 @@ void Go2Driver::handleMode(
     return;
   }
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -433,7 +461,7 @@ void Go2Driver::handlePose(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::Pose);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -457,7 +485,7 @@ void Go2Driver::handleSpeedLevel(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::SpeedLevel);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -481,7 +509,7 @@ void Go2Driver::handleSwitchGait(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::SwitchGait);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 
@@ -499,7 +527,7 @@ void Go2Driver::handleSwitchJoystick(
   req.parameter = js.dump();
   req.header.identity.api_id = static_cast<int>(go2_driver::Mode::SwitchJoystick);
 
-  request_pub_->publish(req);
+  sport_request_pub_->publish(req);
   response->success = true;
 }
 

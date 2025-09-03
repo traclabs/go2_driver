@@ -68,6 +68,8 @@ public:
   Go2Driver(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 private:
+  void initialize();
+
   void publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void publish_pose_stamped(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
@@ -131,7 +133,8 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr lidar_imu_pub_;
-  rclcpp::Publisher<unitree_api::msg::Request>::SharedPtr request_pub_;
+  rclcpp::Publisher<unitree_api::msg::Request>::SharedPtr sport_request_pub_;
+  rclcpp::Publisher<unitree_api::msg::Request>::SharedPtr obstacles_avoid_request_pub_;
   rclcpp::Publisher<unitree_go::msg::LowState>::SharedPtr low_state_pub_;
 
   rclcpp::Service<go2_interfaces::srv::BodyHeight>::SharedPtr set_body_height_service_;
