@@ -151,8 +151,7 @@ void Go2Driver::publish_lidar(const sensor_msgs::msg::PointCloud2::SharedPtr msg
       return;
 
   msg->header.frame_id = "radar";
-  msg->header.stamp.sec = 0;
-  msg->header.stamp.nanosec = 0;
+  msg->header.stamp = now();
   pointcloud_pub_->publish(msg);
 }
 
