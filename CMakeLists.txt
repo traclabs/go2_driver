@@ -38,7 +38,19 @@ add_library(${PROJECT_NAME} SHARED
   src/go2_driver/go2_driver.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME} ${dependencies})
+target_link_libraries(${PROJECT_NAME} PUBLIC
+  rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
+  rclcpp_components::component
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${unitree_go_TARGETS}
+  ${unitree_api_TARGETS}
+  tf2_ros::tf2_ros
+  ${go2_interfaces_TARGETS}
+  point_cloud_transport::point_cloud_transport
+)
 
 rclcpp_components_register_nodes(${PROJECT_NAME} "go2_driver::Go2Driver")
 
