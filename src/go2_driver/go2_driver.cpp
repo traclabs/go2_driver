@@ -146,10 +146,12 @@ void Go2Driver::initialize()
   // Cancel initialization timer
   initialization_timer_->cancel();
 
-  // Initialize point cloud transport after construction
+  // Initialize point cloud transport after cfonstruction
   // shared_from_this can't be used in the constructor
   pct_ = std::make_shared<point_cloud_transport::PointCloudTransport>(shared_from_this());
-  pointcloud_pub_ = std::make_shared<point_cloud_transport::Publisher>(pct_->advertise("pointcloud", 10));
+  // advertise(topic, queue_size) defaults to SensorDataQoS (best effort); use reliable instead
+  pointcloud_pub_ = std::make_shared<point_cloud_transport::Publisher>(
+    pct_->advertise("pointcloud", rclcpp::QoS(10).reliable()));
 
   // Turn off obstacle avoidance
   {
